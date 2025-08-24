@@ -271,7 +271,7 @@ export default function Home() {
                   Ideals Contracting
                 </h1>
                 <p className="text-white/80 text-sm font-medium mt-1 tracking-wide">
-                  Marketing Department Work Tracker
+                  Marketing Department Analyse Tracker
                 </p>
               </div>
             </div>
