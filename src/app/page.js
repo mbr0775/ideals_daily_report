@@ -17,6 +17,7 @@ export default function Home() {
     company: '',
     contact: '',
     address: '',
+    follow_up_date: '',
     appointments: '',
     remarks: '',
     attendees: [] // Array for multiple selections
@@ -77,6 +78,7 @@ export default function Home() {
             company: formData.company,
             contact: formData.contact,
             address: formData.address,
+            follow_up_date: formData.follow_up_date,
             appointments: formData.appointments,
             remarks: formData.remarks,
             attendees: formData.attendees.join(',') // Store as comma-separated string
@@ -94,6 +96,7 @@ export default function Home() {
         company: '',
         contact: '',
         address: '',
+        follow_up_date: '',
         appointments: '',
         remarks: '',
         attendees: []
@@ -120,6 +123,7 @@ export default function Home() {
       company: entry.company,
       contact: entry.contact || '',
       address: entry.address || '',
+      follow_up_date: entry.follow_up_date || '',
       appointments: entry.appointments || '',
       remarks: entry.remarks || '',
       attendees: Array.isArray(entry.attendees) ? entry.attendees : entry.attendees ? entry.attendees.split(',') : []
@@ -206,18 +210,20 @@ export default function Home() {
         const company = String(entry.company || '-').trim();
         const contact = String(entry.contact || '-').trim();
         const address = String(entry.address || '-').trim();
+        const follow_up_date = entry.follow_up_date ? new Date(entry.follow_up_date).toLocaleDateString() : '-';
         const appointments = String(entry.appointments || '-').trim();
         const attendees = Array.isArray(entry.attendees) ? entry.attendees.join(', ') : entry.attendees || '-';
         const remarks = String(entry.remarks || '-').trim();
         
         console.log(`Entry ${index + 1}:`, {
-          company, contact, address, appointments, attendees, remarks
+          company, contact, address, follow_up_date, appointments, attendees, remarks
         });
         
         return [
           company,
           contact,
           address,
+          follow_up_date,
           appointments,
           attendees,
           remarks
@@ -226,7 +232,7 @@ export default function Home() {
       
       autoTable(doc, {
         startY: 65,
-        head: [['Client/Prospect', 'Key Contact', 'Project Location', 'Follow-up Schedule', 'Marketing Reps', 'Lead Status & Notes']],
+        head: [['Client/Prospect', 'Key Contact', 'Project Location', 'Follow-up Date', 'Follow-up Schedule', 'Marketing Reps', 'Lead Status & Notes']],
         body: tableData,
         theme: 'striped',
         styles: {
@@ -256,13 +262,14 @@ export default function Home() {
           },
           1: { cellWidth: 24 },
           2: { cellWidth: 28 },
-          3: { cellWidth: 28 },
-          4: { 
+          3: { cellWidth: 20 },
+          4: { cellWidth: 28 },
+          5: { 
             cellWidth: 24,
             fillColor: [240, 248, 255],
             fontStyle: 'bold'
           },
-          5: { cellWidth: 53 }
+          6: { cellWidth: 43 }
         },
         margin: { left: 10, right: 10 },
         didDrawPage: function (data) {
@@ -456,6 +463,16 @@ export default function Home() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700">📅 Follow-up Date</label>
+              <input 
+                type="date" 
+                name="follow_up_date"
+                value={formData.follow_up_date}
+                onChange={handleInputChange}
+                className="mt-1 p-2 w-full border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] text-black" 
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700">📅 Meeting/Follow-up Schedule</label>
               <input 
                 type="text" 
@@ -585,6 +602,7 @@ export default function Home() {
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">🏢 Client</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📞 Contact</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📍 Location</th>
+                      <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📅 Date</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📅 Follow-up</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">👤 Reps</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📝 Status</th>
@@ -605,6 +623,9 @@ export default function Home() {
                         </td>
                         <td className="border border-gray-300 px-2 md:px-4 py-3 text-gray-900 min-w-[150px]">
                           <div className="break-words">{entry.address || '-'}</div>
+                        </td>
+                        <td className="border border-gray-300 px-2 md:px-4 py-3 text-gray-900 min-w-[100px]">
+                          <div className="break-words">{entry.follow_up_date ? new Date(entry.follow_up_date).toLocaleDateString() : '-'}</div>
                         </td>
                         <td className="border border-gray-300 px-2 md:px-4 py-3 text-gray-900 min-w-[120px]">
                           <div className="break-words">{entry.appointments || '-'}</div>
