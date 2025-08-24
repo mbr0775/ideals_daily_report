@@ -23,7 +23,7 @@ export default function Home() {
     attendees: [] // Array for multiple selections
   });
 
-  const defaultAttendees = ['Bismillah', 'Mubassir', 'Riswan', 'Hanees'];
+  const defaultAttendees = ['Bismillah', 'Mubassir', 'Rizwan', 'Hanees'];
 
   // Fetch entries from Supabase on component mount
   useEffect(() => {
