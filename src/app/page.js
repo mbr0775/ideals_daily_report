@@ -12,13 +12,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [formData, setFormData] = useState({
     company: '',
     contact: '',
     address: '',
     appointments: '',
     remarks: '',
-    attendees: ''
+    attendees: [] // Array for multiple selections
   });
 
   const defaultAttendees = ['Bismillah', 'Mubassir', 'Riswan', 'Hanees'];
@@ -38,7 +39,12 @@ export default function Home() {
 
       if (error) throw error;
 
-      setEntries(data || []);
+      // Convert string attendees to array if necessary
+      const formattedData = data.map(entry => ({
+        ...entry,
+        attendees: Array.isArray(entry.attendees) ? entry.attendees : entry.attendees ? entry.attendees.split(',') : []
+      }));
+      setEntries(formattedData || []);
     } catch (error) {
       console.error('Error fetching entries:', error);
       alert('Error loading entries. Please refresh the page.');
@@ -49,7 +55,7 @@ export default function Home() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    console.log(`Field ${name} changed to:`, value); // Debug log
+    console.log(`Field ${name} changed to:`, value);
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -57,7 +63,6 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    // Check if required fields are filled
     if (!formData.company.trim()) {
       alert('Please enter a client/prospect company name');
       return;
@@ -74,7 +79,7 @@ export default function Home() {
             address: formData.address,
             appointments: formData.appointments,
             remarks: formData.remarks,
-            attendees: formData.attendees
+            attendees: formData.attendees.join(',') // Store as comma-separated string
           }
         ])
         .select();
@@ -83,26 +88,22 @@ export default function Home() {
 
       console.log('New entry added:', data[0]);
       
-      // Add the new entry to the local state
       setEntries(prev => [data[0], ...prev]);
       
-      // Reset form
       setFormData({
         company: '',
         contact: '',
         address: '',
         appointments: '',
         remarks: '',
-        attendees: ''
+        attendees: []
       });
 
-      // Success message for adding entry
       const addSuccessMsg = document.createElement('div');
       addSuccessMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
       addSuccessMsg.innerHTML = '✅ Lead entry added successfully!';
       document.body.appendChild(addSuccessMsg);
       
-      // Remove message after 3 seconds
       setTimeout(() => {
         addSuccessMsg.remove();
       }, 3000);
@@ -115,20 +116,15 @@ export default function Home() {
   };
 
   const handleEdit = async (entry) => {
-    // Populate form with entry data for editing
     setFormData({
       company: entry.company,
       contact: entry.contact || '',
       address: entry.address || '',
       appointments: entry.appointments || '',
       remarks: entry.remarks || '',
-      attendees: entry.attendees || ''
+      attendees: Array.isArray(entry.attendees) ? entry.attendees : entry.attendees ? entry.attendees.split(',') : []
     });
     
-    // Remove the entry being edited from local state
-    setEntries(prev => prev.filter(e => e.id !== entry.id));
-    
-    // Delete the entry from database (it will be re-added when form is submitted)
     try {
       const { error } = await supabase
         .from('work_entries')
@@ -137,13 +133,13 @@ export default function Home() {
 
       if (error) throw error;
 
-      // Success message for editing preparation
+      setEntries(prev => prev.filter(e => e.id !== entry.id));
+
       const editSuccessMsg = document.createElement('div');
       editSuccessMsg.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
       editSuccessMsg.innerHTML = '📝 Entry loaded for editing. Make changes and click "Add Lead Entry" to save.';
       document.body.appendChild(editSuccessMsg);
       
-      // Remove message after 4 seconds (longer for edit message)
       setTimeout(() => {
         editSuccessMsg.remove();
       }, 4000);
@@ -163,15 +159,13 @@ export default function Home() {
 
         if (error) throw error;
 
-        // Remove from local state
         setEntries(prev => prev.filter(entry => entry.id !== id));
-        // Success message for deleting entry
+        
         const deleteSuccessMsg = document.createElement('div');
         deleteSuccessMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
         deleteSuccessMsg.innerHTML = '🗑️ Entry deleted successfully!';
         document.body.appendChild(deleteSuccessMsg);
         
-        // Remove message after 3 seconds
         setTimeout(() => {
           deleteSuccessMsg.remove();
         }, 3000);
@@ -190,13 +184,10 @@ export default function Home() {
 
     try {
       const doc = new jsPDF();
-      
-      // Set up the document
       const pageWidth = doc.internal.pageSize.width;
       
-      // Header - completely clean without any symbols
       doc.setFontSize(22);
-      doc.setTextColor(102, 0, 51); // #660033
+      doc.setTextColor(102, 0, 51);
       doc.text('IDEALS CONTRACTING', 20, 25);
       
       doc.setFontSize(14);
@@ -207,19 +198,16 @@ export default function Home() {
       doc.setTextColor(150, 150, 150);
       doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 48);
       
-      // Add a line separator
       doc.setDrawColor(102, 0, 51);
       doc.setLineWidth(1);
       doc.line(20, 55, pageWidth - 20, 55);
       
-      // EXPLICIT MAPPING: Ensure we get the right data for each column
       const tableData = entries.map((entry, index) => {
-        // Extract each field explicitly
         const company = String(entry.company || '-').trim();
-        const contact = String(entry.contact || '-').trim(); 
+        const contact = String(entry.contact || '-').trim();
         const address = String(entry.address || '-').trim();
         const appointments = String(entry.appointments || '-').trim();
-        const attendees = String(entry.attendees || '-').trim();
+        const attendees = Array.isArray(entry.attendees) ? entry.attendees.join(', ') : entry.attendees || '-';
         const remarks = String(entry.remarks || '-').trim();
         
         console.log(`Entry ${index + 1}:`, {
@@ -227,19 +215,18 @@ export default function Home() {
         });
         
         return [
-          company,      // Client/Prospect
-          contact,      // Key Contact  
-          address,      // Project Location
-          appointments, // Follow-up Schedule
-          attendees,    // Marketing Rep
-          remarks       // Lead Status & Notes
+          company,
+          contact,
+          address,
+          appointments,
+          attendees,
+          remarks
         ];
       });
       
-      // Create the table with proper marketing headers
       autoTable(doc, {
         startY: 65,
-        head: [['Client/Prospect', 'Key Contact', 'Project Location', 'Follow-up Schedule', 'Marketing Rep', 'Lead Status & Notes']],
+        head: [['Client/Prospect', 'Key Contact', 'Project Location', 'Follow-up Schedule', 'Marketing Reps', 'Lead Status & Notes']],
         body: tableData,
         theme: 'striped',
         styles: {
@@ -251,7 +238,7 @@ export default function Home() {
           textColor: [0, 0, 0]
         },
         headStyles: {
-          fillColor: [102, 0, 51], // #660033
+          fillColor: [102, 0, 51],
           textColor: [255, 255, 255],
           fontSize: 9,
           fontStyle: 'bold',
@@ -266,20 +253,19 @@ export default function Home() {
             cellWidth: 28, 
             fontStyle: 'bold',
             textColor: [102, 0, 51]
-          }, // Client/Prospect
-          1: { cellWidth: 24 }, // Key Contact
-          2: { cellWidth: 28 }, // Project Location
-          3: { cellWidth: 28 }, // Follow-up Schedule
+          },
+          1: { cellWidth: 24 },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 28 },
           4: { 
             cellWidth: 24,
             fillColor: [240, 248, 255],
             fontStyle: 'bold'
-          }, // Marketing Rep (highlighted)
-          5: { cellWidth: 53 } // Lead Status & Notes
+          },
+          5: { cellWidth: 53 }
         },
         margin: { left: 10, right: 10 },
         didDrawPage: function (data) {
-          // Clean footer
           doc.setFontSize(8);
           doc.setTextColor(120, 120, 120);
           const footerY = doc.internal.pageSize.height - 15;
@@ -289,7 +275,6 @@ export default function Home() {
         }
       });
       
-      // Save the PDF with clean filename
       const today = new Date();
       const dateStr = today.getFullYear() + '-' + 
                      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -297,7 +282,6 @@ export default function Home() {
       const fileName = `Ideals_Contracting_Marketing_Leads_${dateStr}.pdf`;
       doc.save(fileName);
       
-      // Success message for PDF export
       const exportSuccessMsg = document.createElement('div');
       exportSuccessMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300';
       exportSuccessMsg.innerHTML = '📄 PDF exported successfully!';
@@ -313,7 +297,6 @@ export default function Home() {
     }
   };
 
-  // Icon components using SVG
   const EditIcon = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -338,15 +321,19 @@ export default function Home() {
     </svg>
   );
 
+  const ArrowDownIcon = () => (
+    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
       <header className="bg-gradient-to-r from-[#660033] to-[#440022] shadow-lg relative">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo and Title Section */}
             <div className="flex items-center space-x-3 min-w-0 flex-1">
-              {/* Simple logo for mobile, fancy container for desktop */}
               <div className="md:bg-white/10 md:backdrop-blur-sm md:rounded-full md:p-3 md:shadow-lg md:border md:border-white/20 flex-shrink-0">
                 <Image 
                   src={logo}
@@ -366,7 +353,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Desktop Stats */}
             <div className="hidden md:flex items-center space-x-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
                 <div className="text-white/60 text-xs uppercase tracking-widest font-semibold">
@@ -390,7 +376,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
@@ -400,7 +385,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Mobile Menu Dropdown */}
           {mobileMenuOpen && (
             <div className="md:hidden mt-4 pb-4 border-t border-white/20 pt-4">
               <div className="grid grid-cols-2 gap-3">
@@ -482,34 +466,72 @@ export default function Home() {
                 className="mt-1 p-2 w-full border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] placeholder-gray-400 text-black" 
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">👤 Marketing Representative</label>
-              <select 
-                name="attendees"
-                value={formData.attendees}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] text-black bg-white"
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700">👤 Marketing Representatives</label>
+              <div 
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="mt-1 p-2 w-full border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] cursor-pointer flex items-center justify-between bg-white text-black"
               >
-                <option value="">Select team member or enter custom name</option>
-                {defaultAttendees.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-                <option value="custom">Custom (Enter below)</option>
-              </select>
-              {formData.attendees === 'custom' && (
-                <input 
-                  type="text" 
-                  name="customAttendee"
-                  placeholder="Enter team member name" 
-                  className="mt-2 p-2 w-full border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] placeholder-gray-400 text-black"
-                  onChange={(e) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      attendees: e.target.value
-                    }));
-                  }}
-                />
+                <span className="text-gray-700">
+                  {formData.attendees.length === 0 ? 'Select representatives' : `Selected ${formData.attendees.length} representatives`}
+                </span>
+                <ArrowDownIcon />
+              </div>
+              {showDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
+                  {defaultAttendees.map(name => (
+                    <label key={name} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                      <span className="flex-1 text-black">{name}</span>
+                      <input 
+                        type="checkbox"
+                        checked={formData.attendees.includes(name)}
+                        onChange={(e) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            attendees: e.target.checked 
+                              ? [...prev.attendees, name]
+                              : prev.attendees.filter(a => a !== name)
+                          }));
+                        }}
+                        className="h-4 w-4 text-[#660033] focus:ring-[#660033] border-gray-300 rounded"
+                      />
+                    </label>
+                  ))}
+                  <div className="px-4 py-2 border-t border-gray-200">
+                    <input 
+                      type="text" 
+                      placeholder="Enter custom name and press Enter"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.target.value.trim()) {
+                          const customName = e.target.value.trim();
+                          if (!formData.attendees.includes(customName)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              attendees: [...prev.attendees, customName]
+                            }));
+                          }
+                          e.target.value = '';
+                          e.preventDefault();
+                        }
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#660033] focus:ring-[#660033] placeholder-gray-400 text-black"
+                    />
+                  </div>
+                </div>
               )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {formData.attendees.map(att => (
+                  <div key={att} className="bg-[#660033]/10 text-[#660033] px-3 py-1 rounded-full flex items-center text-sm font-medium">
+                    {att}
+                    <button 
+                      onClick={() => setFormData(prev => ({...prev, attendees: prev.attendees.filter(a => a !== att)}))}
+                      className="ml-2 text-[#660033] hover:text-red-600 focus:outline-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">📝 Lead Status & Notes</label>
@@ -532,7 +554,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Work Entries Section */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
             <h2 className="text-[#660033] font-semibold">
@@ -565,7 +586,7 @@ export default function Home() {
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📞 Contact</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📍 Location</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📅 Follow-up</th>
-                      <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">👤 Rep</th>
+                      <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">👤 Reps</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-left font-semibold text-sm whitespace-nowrap">📝 Status</th>
                       <th className="border border-gray-300 px-2 md:px-4 py-3 text-center font-semibold text-sm whitespace-nowrap">Actions</th>
                     </tr>
@@ -589,7 +610,9 @@ export default function Home() {
                           <div className="break-words">{entry.appointments || '-'}</div>
                         </td>
                         <td className="border border-gray-300 px-2 md:px-4 py-3 text-gray-900 min-w-[100px]">
-                          <div className="break-words text-[#660033] font-medium">{entry.attendees || '-'}</div>
+                          <div className="break-words text-[#660033] font-medium">
+                            {Array.isArray(entry.attendees) ? entry.attendees.join(', ') : entry.attendees || '-'}
+                          </div>
                         </td>
                         <td className="border border-gray-300 px-2 md:px-4 py-3 text-gray-900 min-w-[150px]">
                           <div className="break-words">{entry.remarks || '-'}</div>
